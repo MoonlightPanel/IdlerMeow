@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit File - <%= filePath %></title>
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f5f5f5; }
+        .editor-container { background: white; max-width: 100%; margin: 0 auto; }
+        .buttons { margin: 0; padding: 15px; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; border-bottom: 1px solid #ddd; }
+        .buttons h2 { margin: 0; font-size: 1.2em; }
+        .buttons button, .buttons a { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .save-btn { background-color: #28a745; color: white; }
+        .back-btn { background-color: #6c757d; color: white; }
+
+        /* CodeMirror Customizations */
+        .CodeMirror {
+            border: 1px solid #ddd;
+            height: calc(100vh - 70px); /* Full viewport height minus header */
+            font-size: 16px; /* Larger font size */
+        }
+
+        /* Toast Notification Styles */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        .toast { background-color: #333; color: white; padding: 15px 20px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateX(100%); }
+        .toast.show { opacity: 1; transform: translateX(0); }
+        .toast.success { background-color: #28a745; }
+        .toast.error { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="editor-container">
+        <div class="buttons">
+            <h2>Editing: <%= filePath %></h2>
+            <div>
+                <button class="save-btn" onclick="saveFile()">Save Changes</button>
+                <a href="/server/<%= server.port %>/files?path=<%= encodeURIComponent(currentPath) %>" class="back-btn">Back to Files</a>
+            </div>
+        </div>
+        <textarea id="file-content"><%= content %></textarea>
+    </div>
+
+    <!-- CodeMirror JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/meta.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/runmode/runmode.min.js"></script>
+    <!-- Dynamically load modes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/properties/properties.min.js"></script>
+
+
+    <script>
+        const serverPort = <%= server.port %>;
+        const filePath = "<%= filePath %>";
+        let editor;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const content = document.getElementById('file-content');
+            const info = CodeMirror.findModeByFileName(filePath);
+            const mode = info ? info.mode : 'null';
+
+            editor = CodeMirror.fromTextArea(content, {
+                lineNumbers: true,
+                theme: 'material-darker',
+                mode: mode,
+                autofocus: true
+            });
+        });
+
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => container.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        async function saveFile() {
+            const content = editor.getValue(); // Get content from CodeMirror instance
+            const response = await fetch(`/api/server/${serverPort}/files/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: filePath, content: content })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast('File saved successfully!');
+            } else {
+                showToast('Error saving file: ' + result.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<h2>Manage Users</h2>
+<a href="/index">Back</a>
+<ul>
+  <% users.forEach(u => { %>
+    <form method="post" action="/admin/users/update">
+      <input name="username" value="<%= u.username %>">
+      <input name="email" value="<%= u.email %>">
+      <input name="password" value="<%= u.password %>">
+      <select name="admin">
+        <option value="false" <%= !u.admin ? "selected" : "" %>>User</option>
+        <option value="true" <%= u.admin ? "selected" : "" %>>Admin</option>
+      </select>
+      <button type="submit">Save</button>
+    </form>
+  <% }) %>
+</ul>

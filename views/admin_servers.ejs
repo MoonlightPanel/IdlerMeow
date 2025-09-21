@@ -1,0 +1,27 @@
+<h2>Manage Servers</h2>
+<a href="/index">Back</a>
+
+<h3>Create Server</h3>
+<form method="post" action="/admin/servers/create">
+  <input name="cpu" placeholder="CPU core" required>
+  <input name="ram" placeholder="RAM GB" required>
+  <input name="disk" placeholder="Disk GB" required>
+  <select name="userEmail">
+    <% users.forEach(u => { %>
+      <option value="<%= u.email %>"><%= u.email %></option>
+    <% }) %>
+  </select>
+  <select name="port">
+    <% for (let p = 25510; p <= 25560; p++) { %>
+      <option value="<%= p %>"><%= p %></option>
+    <% } %>
+  </select>
+  <button type="submit">Create</button>
+</form>
+
+<h3>Existing Servers</h3>
+<ul>
+  <% servers.forEach(s => { %>
+    <li>Port <%= s.port %> - User: <%= s.user %> (CPU: <%= s.cpu %>, RAM: <%= s.ram %>, Disk: <%= s.disk %>)</li>
+  <% }) %>
+</ul>

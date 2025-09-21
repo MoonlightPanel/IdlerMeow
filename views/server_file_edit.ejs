@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit File - <%= filePath %></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: <%= settings.backgroundColor || '#f5f5f5' %>; 
+            <% if (settings.backgroundImage) { %>
+                background-image: url('<%= settings.backgroundImage %>');
+                background-size: cover;
+                background-attachment: fixed;
+            <% } %>
+        }
+        .top-bar {
+            background: rgba(44, 62, 80, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 20px;
+            margin: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .top-bar h1 {
+            font-size: 24px;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background-color: #3498db;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .nav-links a:hover {
+            background-color: #2980b9;
+        }
+        .profile-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .profile-btn {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background-color: #e74c3c;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .profile-btn:hover {
+            background-color: #c0392b;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: white;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            z-index: 1;
+        }
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            background: none;
+            border-radius: 0;
+        }
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        .profile-dropdown:hover .dropdown-content {
+            display: block;
+        }
+        .container {
+            display: flex;
+            min-height: calc(100vh - 90px);
+            gap: 10px;
+            padding: 0 10px;
+        }
+        .sidebar {
+            width: 250px;
+            background: rgba(52, 73, 94, 0.8);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            color: white;
+            padding: 20px 0;
+            margin: 10px;
+            border-radius: 10px;
+        }
+        .sidebar-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #2c3e50;
+            transition: background-color 0.3s;
+            text-decoration: none;
+            color: white;
+            display: block;
+            font-size: 14px;
+        }
+        .sidebar-item:hover {
+            background-color: #2c3e50;
+        }
+        .sidebar-item.active {
+            background-color: #2c3e50;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .editor-header {
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .editor-header h2 {
+            margin: 0;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .editor-actions button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 14px;
+        }
+        .save-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .save-btn:hover {
+            background-color: #218838;
+        }
+        .CodeMirror {
+            height: calc(100vh - 140px);
+            font-size: 16px;
+            border: none;
+        }
+        #toast-container { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 1050; 
+        }
+        .toast { 
+            background-color: #333; 
+            color: white; 
+            padding: 15px 20px; 
+            border-radius: 5px; 
+            margin-bottom: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+            opacity: 0; 
+            transition: opacity 0.3s, transform 0.3s; 
+            transform: translateX(100%); 
+        }
+        .toast.show { 
+            opacity: 1; 
+            transform: translateX(0); 
+        }
+        .toast.success { 
+            background-color: #28a745; 
+        }
+        .toast.error { 
+            background-color: #dc3545; 
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="top-bar">
+        <h1><%= settings.title || 'Server Management' %></h1>
+        <div class="nav-links">
+            <a href="/index">Dashboard</a>
+            <% if (typeof user !== 'undefined' && user.admin) { %>
+                <a href="/admin">Admin Panel</a>
+            <% } %>
+            <div class="profile-dropdown">
+                <span class="profile-btn">Profile</span>
+                <div class="dropdown-content">
+                    <a href="#">Profile</a>
+                    <a href="/logout">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <a href="/server/<%= server.port %>" class="sidebar-item">
+                Console
+            </a>
+            <div class="sidebar-item active">
+                File Manager
+            </div>
+            <% if (typeof user !== 'undefined' && (user.admin || server.owner === user.email)) { %>
+                <a href="/server/<%= server.port %>/users" class="sidebar-item">
+                    Users
+                </a>
+            <% } %>
+            <div class="sidebar-item" style="color: #888; cursor: not-allowed;">
+                Settings
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="editor-header">
+                <h2>Editing: <%= filePath %></h2>
+                <div class="editor-actions">
+                    <button class="save-btn" onclick="saveFile()">Save Changes</button>
+                </div>
+            </div>
+            <textarea id="file-content"><%= content %></textarea>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/meta.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/properties/properties.min.js"></script>
+
+    <script>
+        const serverPort = <%= server.port %>;
+        const filePath = "<%= filePath %>";
+        let editor;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const content = document.getElementById('file-content');
+            const info = CodeMirror.findModeByFileName(filePath);
+            const mode = info ? info.mode : 'null';
+
+            editor = CodeMirror.fromTextArea(content, {
+                lineNumbers: true,
+                theme: 'material-darker',
+                mode: mode,
+                autofocus: true
+            });
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => container.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        async function saveFile() {
+            const content = editor.getValue();
+            try {
+                const response = await fetch(`/api/server/${serverPort}/files/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: filePath, content })
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    showToast('File saved successfully!');
+                } else {
+                    showToast(result.message || 'Error saving file.', 'error');
+                }
+            } catch (error) {
+                console.error('Save file error:', error);
+                showToast('An unexpected error occurred.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
